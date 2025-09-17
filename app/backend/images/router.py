@@ -11,8 +11,9 @@ router = APIRouter(prefix="/images", tags=["images"])
 
 
 @router.post(
-        "/", status_code=status.HTTP_200_OK,
-        summary="Загрузка изображений"
+    "/",
+    status_code=status.HTTP_200_OK,
+    summary="Загрузка изображений"
 )
 async def upload_image(
     db: SessionDep,
@@ -35,9 +36,9 @@ async def upload_image(
 
 
 @router.get(
-        "/health",
-        status_code=status.HTTP_200_OK,
-        summary="Проверка состояния PostgreSQL и RabbitMQ"
+    "/health",
+    status_code=status.HTTP_200_OK,
+    summary="Проверка состояния PostgreSQL и RabbitMQ"
 )
 async def health_check(db: SessionDep):
     """Проверить состояние сервиса."""
@@ -51,9 +52,9 @@ async def health_check(db: SessionDep):
 
 
 @router.get(
-        "/{id}",
-        status_code=status.HTTP_200_OK,
-        summary="Получение инфомарции об изображении по ID"
+    "/{id}",
+    status_code=status.HTTP_200_OK,
+    summary="Получение инфомарции об изображении по ID"
 )
 async def get_image_info(
     db: SessionDep,
