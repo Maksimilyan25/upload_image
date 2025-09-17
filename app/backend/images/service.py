@@ -2,6 +2,8 @@ import os
 import uuid
 from typing import Optional, Dict
 
+from sqlalchemy import text
+
 from app.backend.images.repository import ImageRepository
 from app.backend.images.rabbitmq import RabbitMQClient
 from app.backend.database.db import SessionDep
@@ -83,7 +85,7 @@ class ImageService:
         # Проверяем подключение к БД
         try:
             # Простая проверка подключения
-            await self.db.execute("SELECT 1")
+            await self.db.execute(text("SELECT 1"))
             health_status["database"] = "ok"
         except Exception as e:
             health_status["database"] = f"error: {str(e)}"
