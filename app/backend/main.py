@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from app.backend.database.db import engine, Base
 from app.backend.images.router import router as images_router
+from app.backend.logging_config import logger
 
 
 async def create_tables():
@@ -15,8 +16,11 @@ async def create_tables():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Запуск приложения. Создание таблиц в базе данных.")
     await create_tables()
+    logger.info("Таблицы успешно созданы. Приложение готово к работе.")
     yield
+    logger.info("Завершение работы приложения.")
 
 
 # Инициализация приложения
@@ -37,6 +41,7 @@ app = FastAPI(
     description="Возвращает приветственное сообщение сервиса"
 )
 async def root():
+    logger.info("Получен запрос к корневому endpoint'у")
     return {"message": "Сервис обработки изображений"}
 
 

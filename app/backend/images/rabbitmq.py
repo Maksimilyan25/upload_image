@@ -2,6 +2,7 @@ import pika
 import json
 import os
 from typing import Callable, Any
+from app.backend.logging_config import logger
 
 
 class RabbitMQClient:
@@ -12,6 +13,8 @@ class RabbitMQClient:
 
     def connect(self):
         """Подключиться к RabbitMQ."""
+        logger.info("Попытка подключения к RabbitMQ")
+
         try:
             self.connection = pika.BlockingConnection(
                 pika.URLParameters(self.rabbitmq_url)
@@ -19,21 +22,28 @@ class RabbitMQClient:
             self.channel = self.connection.channel()
             # Объявляем очередь
             self.channel.queue_declare(queue='images', durable=True)
+
+            logger.info("Успешное подключение к RabbitMQ")
         except Exception as e:
-            print(f"Ошибка подключения к RabbitMQ: {e}")
+            logger.error("Ошибка подключения к RabbitMQ: %s", str(e))
             raise
 
     def disconnect(self):
         """Отключиться от RabbitMQ."""
+        logger.info("Отключение от RabbitMQ")
+
         if self.connection and not self.connection.is_closed:
             self.connection.close()
+            logger.info("Успешное отключение от RabbitMQ")
 
     def send_message(
-        self,
-        message: dict,
-        queue_name: str = 'images'
+            self,
+            message: dict,
+            queue_name: str = 'images'
     ):
         """Отправить сообщение в очередь."""
+        logger.info("Отправка сообщения в очередь %s", queue_name)
+
         try:
             if not self.connection or self.connection.is_closed:
                 self.connect()
@@ -43,19 +53,23 @@ class RabbitMQClient:
                 routing_key=queue_name,
                 body=json.dumps(message),
                 properties=pika.BasicProperties(
-                    delivery_mode=2,  # сделать сообщение постоянным
+                    delivery_mode=2,
                 )
             )
+
+            logger.info("Сообщение отправлено в очередь %s", queue_name)
         except Exception as e:
-            print(f"Ошибка отправки сообщения в RabbitMQ: {e}")
+            logger.error("Ошибка отправки сообщения в RabbitMQ: %s", str(e))
             raise
 
     def consume_messages(
-        self,
-        callback: Callable[[dict], Any],
-        queue_name: str = 'images'
+            self,
+            callback: Callable[[dict], Any],
+            queue_name: str = 'images'
     ):
         """Потреблять сообщения из очереди."""
+        logger.info("Начало потребления сообщений из очереди %s", queue_name)
+
         try:
             if not self.connection or self.connection.is_closed:
                 self.connect()
@@ -63,11 +77,13 @@ class RabbitMQClient:
             def _callback(ch, method, properties, body):
                 try:
                     message = json.loads(body)
+                    logger.info("Получено сообщение из очереди %s", queue_name)
                     callback(message)
                     # Подтверждаем получение сообщения
                     ch.basic_ack(delivery_tag=method.delivery_tag)
+                    logger.info("Сообщение успешно обработано")
                 except Exception as e:
-                    print(f"Ошибка обработки сообщения: {e}")
+                    logger.error("Ошибка обработки сообщения: %s", str(e))
                     # Не подтверждаем сообщение, чтобы оно вернулось в очередь
                     ch.basic_nack(
                         delivery_tag=method.delivery_tag,
@@ -81,11 +97,11 @@ class RabbitMQClient:
                 on_message_callback=_callback
             )
 
-            print("Ожидание сообщений. Для выхода нажмите CTRL+C")
+            logger.info("Ожидание сообщений. Для выхода нажмите CTRL+C")
             self.channel.start_consuming()
         except KeyboardInterrupt:
-            print("Остановка потребления сообщений")
+            logger.info("Остановка потребления сообщений")
             self.channel.stop_consuming()
         except Exception as e:
-            print(f"Ошибка потребления сообщений из RabbitMQ: {e}")
+            logger.error("Ошибка потребления сообщений: %s", str(e))
             raise
