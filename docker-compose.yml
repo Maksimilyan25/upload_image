@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - rabbit
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/imagedb
+      - RABBITMQ_URL=amqp://guest:guest@rabbit:5672/
+    volumes:
+      - ./uploads:/app/uploads
+    command: >
+      sh -c "
+      alembic -c alembic.ini upgrade head &&
+      uvicorn app.backend.main:app --host 0.0.0.0 --port 8000"
+
+  # Worker для обработки изображений
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    depends_on:
+      - db
+      - rabbit
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/imagedb
+      - RABBITMQ_URL=amqp://guest:guest@rabbit:5672/
+    volumes:
+      - ./uploads:/app/uploads
+    command: bash -c "sleep 10 && export PYTHONPATH=/app && python app/backend/worker/main.py"
+
+  # База данных PostgreSQL
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=imagedb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Очередь сообщений RabbitMQ
+  rabbit:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
